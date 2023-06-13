@@ -4,9 +4,9 @@ class Capture {
     this.output = output;
     this.list_forms = list_forms || {};
   }
-  format(strings) {
+  format(strings, html_mode) {
     let values = {};
-    for (let name of this.nodes) {
+    for (let name in this.nodes) {
       if (name == 'root') continue;
       let node = this.nodes[name];
       if (Array.isArray(node)) {
@@ -20,16 +20,16 @@ class Capture {
         values[name] = strings[node.id];
       }
     }
-    this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
+    return this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
   }
   requirements() {
     let ret = [];
-    for (let name of this.nodes) {
+    for (let name in this.nodes) {
       let node = this.nodes[name];
       if (Array.isArray(node)) {
         node.forEach(n => ret.push({name: name, node: n}));
       } else {
-        ret.push({name: name, node: n});
+        ret.push({name: name, node: node});
       }
     }
     return ret;
@@ -51,11 +51,11 @@ class Pattern {
   }
   make_capture(dct) {
     if (typeof this.output === 'string') {
-      return Capture(dct, this.output);
+      return new Capture(dct, this.output);
     } else {
-      for (let option in this.output) {
+      for (let option of this.output) {
         if (!option.hasOwnProperty('cond') || this.satisfies(option.cond)) {
-          return Capture(
+          return new Capture(
             dct,
             option.hasOwnProperty('output') ? option.output : '',
             option.hasOwnProperty('lists') ? option.lists : {}
@@ -69,7 +69,7 @@ class Pattern {
     let cur_root = null;
     let cur = {};
     let seen_roots = new Set();
-    for (let obj in this.query.captures(tree.rootNode)) {
+    for (let obj of this.query.captures(tree.rootNode)) {
       let name = obj.name;
       let node = obj.node;
       if (name == 'root' || name == 'root_text') {
@@ -100,7 +100,7 @@ class Pattern {
 }
 
 function load_patterns(language, blob) {
-  return blob.map(obj => Pattern(language, obj.pattern, obj.output));
+  return blob.map(obj => new Pattern(language, obj.pattern, obj.output));
 }
 
 function null_capture(node) {
@@ -112,16 +112,16 @@ function null_capture(node) {
     dct[n] = node.children[i];
   }
   pat = '(' + ls.join(' ') + ')';
-  return Capture(dct, pat);
+  return new Capture(dct, pat);
 }
 
-function translate(patterns, tree) {
+function translate(patterns, tree, html_mode) {
   let matches = {};
   patterns.forEach(pat => pat.match(tree, matches));
   let todo = [tree.rootNode];
   let done = {};
   while (todo.length > 0) {
-    let cur = ls[ls.length-1];
+    let cur = todo[todo.length-1];
     if (done.hasOwnProperty(cur.id)) {
       todo.pop();
       continue;
@@ -143,7 +143,11 @@ function translate(patterns, tree) {
     });
     if (!incomplete) {
       todo.pop();
-      done[cur.id] = cap.format(done);
+      let str = cap.format(done, html_mode);
+      if (html_mode) {
+        str = '<span class="tree-node" data-id="'+cur.id+'">'+str+'</span>';
+      }
+      done[cur.id] = str;
     }
   }
   return done[tree.rootNode.id];
