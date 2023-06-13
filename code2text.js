@@ -11,16 +11,35 @@ class Capture {
       let node = this.nodes[name];
       if (Array.isArray(node)) {
         let j = ' ';
-        if (this.list_forms.hasOwnProperty(name) &&
-            this.list_forms[name].hasOwnProperty('join')) {
-          j = this.list_forms[name].join;
+        let mode = null;
+        if (this.list_forms.hasOwnProperty(name)) {
+          if (html_mode && this.list_forms[name].hasOwnProperty('html_type')) {
+            mode = this.list_forms[name].html_type;
+            if (mode == 'p') {
+              j = '</p><p>';
+            } else if (mode == 'ul' || mode == 'ol') {
+              j = '</li><li>';
+            }
+          } else if (this.list_forms[name].hasOwnProperty('join')) {
+            j = this.list_forms[name].join;
+          }
         }
         values[name] = node.map(n => strings[n.id]).join(j);
+        if (mode == 'ul' || mode == 'ol') {
+          values[name] = '<'+mode+'><li>'+values[name]+'</li></'+mode+'>';
+        } else if (mode == 'p') {
+          values[name] = '<p>'+values[name]+'</p>';
+        }
       } else {
         values[name] = strings[node.id];
       }
     }
-    return this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
+    let ret = this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
+    if (html_mode) {
+      let root = (this.nodes.hasOwnProperty('root') ? this.nodes.root : this.nodes.root_text);
+      ret = '<span class="tree-node" data-id="'+root.id+'">'+ret+'</span>';
+    }
+    return ret;
   }
   requirements() {
     let ret = [];
@@ -143,11 +162,7 @@ function translate(patterns, tree, html_mode) {
     });
     if (!incomplete) {
       todo.pop();
-      let str = cap.format(done, html_mode);
-      if (html_mode) {
-        str = '<span class="tree-node" data-id="'+cur.id+'">'+str+'</span>';
-      }
-      done[cur.id] = str;
+      done[cur.id] = cap.format(done, html_mode);
     }
   }
   return done[tree.rootNode.id];
