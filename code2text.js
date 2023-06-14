@@ -24,7 +24,7 @@ class Capture {
             j = this.list_forms[name].join;
           }
         }
-        values[name] = node.map(n => strings[n.id]).join(j);
+        values[name] = node.map(n => strings[n.id]).filter(s => typeof s == 'string' && s.length > 0).join(j);
         if (mode == 'ul' || mode == 'ol') {
           values[name] = '<'+mode+'><li>'+values[name]+'</li></'+mode+'>';
         } else if (mode == 'p') {
@@ -35,7 +35,7 @@ class Capture {
       }
     }
     let ret = this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
-    if (html_mode) {
+    if (html_mode && ret.length > 0) {
       let root = (this.nodes.hasOwnProperty('root') ? this.nodes.root : this.nodes.root_text);
       ret = '<span class="tree-node" data-id="'+root.id+'">'+ret+'</span>';
     }
