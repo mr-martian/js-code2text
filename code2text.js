@@ -61,7 +61,7 @@ class Pattern {
     this.output = output;
   }
   satisfies(cond, dct) {
-    for (let c in cond) {
+    for (let c of cond) {
       if (c.hasOwnProperty('has') && !dct.hasOwnProperty(c.has)) {
         return false;
       }
@@ -73,7 +73,7 @@ class Pattern {
       return new Capture(dct, this.output);
     } else {
       for (let option of this.output) {
-        if (!option.hasOwnProperty('cond') || this.satisfies(option.cond)) {
+        if (!option.hasOwnProperty('cond') || this.satisfies(option.cond, dct)) {
           return new Capture(
             dct,
             option.hasOwnProperty('output') ? option.output : '',
