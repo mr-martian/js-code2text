@@ -84,36 +84,27 @@ class Pattern {
     }
   }
   match(tree, captures) {
-    let cur_empty = true;
-    let cur_root = null;
-    let cur = {};
-    let seen_roots = new Set();
-    for (let obj of this.query.captures(tree.rootNode)) {
-      let name = obj.name;
-      let node = obj.node;
-      if (name == 'root' || name == 'root_text') {
-        if (!seen_roots.has(node.id)) {
-          if (!cur_empty && !captures.hasOwnProperty(cur_root)) {
-            captures[cur_root] = this.make_capture(cur);
+    for (let match of this.query.matches(tree.rootNode)) {
+      let cur_root = null;
+      let cur = {};
+      for (let obj of match.captures) {
+        let name = obj.name;
+        let node = obj.node;
+        if (name == 'root' || name == 'root_text') {
+          cur_root = node.id;
+        }
+        if (name.endsWith('_list')) {
+          if (!cur.hasOwnProperty(name)) {
+            cur[name] = [];
           }
-          seen_roots.add(node.id);
-          cur = {};
-          cur_empty = true;
+          cur[name].push(node);
+        } else {
+          cur[name] = node;
         }
-        cur_root = node.id;
       }
-      if (name.endsWith('_list')) {
-        if (!cur.hasOwnProperty(name)) {
-          cur[name] = [];
-        }
-        cur[name].push(node);
-      } else {
-        cur[name] = node;
+      if (cur_root) {
+        captures[cur_root] = this.make_capture(cur);
       }
-      cur_empty = false;
-    }
-    if (!cur_empty && !captures.hasOwnProperty(cur_root)) {
-      captures[cur_root] = this.make_capture(cur);
     }
   }
 }
