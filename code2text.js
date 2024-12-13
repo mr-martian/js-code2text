@@ -1,3 +1,13 @@
+// from https://stackoverflow.com/questions/6234773/can-i-escape-html-special-chars-in-javascript
+function escape_html(unsafe) {
+  return unsafe
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 class Capture {
   constructor(nodes, output, list_forms) {
     this.nodes = nodes;
@@ -34,7 +44,11 @@ class Capture {
         values[name] = strings[node.id];
       }
     }
-    let ret = this.output.replace(/{(\w+)}/g, (_, name) => values[name]);
+    let pat = this.output;
+    if (html_mode) {
+      pat = escape_html(pat);
+    }
+    let ret = pat.replace(/{(\w+)}/g, (_, name) => values[name]);
     if (html_mode && ret.length > 0) {
       let root = (this.nodes.hasOwnProperty('root') ? this.nodes.root : this.nodes.root_text);
       ret = '<span class="tree-node" data-id="'+root.id+'">'+ret+'</span>';
@@ -145,6 +159,9 @@ function translate(patterns, tree, html_mode) {
       if (pair.name != 'root' && !done.hasOwnProperty(pair.node.id)) {
         if (pair.name.endsWith('_text')) {
           done[pair.node.id] = pair.node.text;
+          if (html_mode) {
+            done[pair.node.id] = escape_html(done[pair.node.id]);
+          }
         } else {
           todo.push(pair.node);
           incomplete = true;
