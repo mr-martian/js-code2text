@@ -8,6 +8,10 @@ function escape_html(unsafe) {
     .replace(/'/g, "&#039;");
 }
 
+function maybe_escape(str, html_mode) {
+  return html_mode ? escape_html(str) : str;
+}
+
 class Capture {
   constructor(nodes, output, list_forms) {
     this.nodes = nodes;
@@ -44,10 +48,7 @@ class Capture {
         values[name] = strings[node.id];
       }
     }
-    let pat = this.output;
-    if (html_mode) {
-      pat = escape_html(pat);
-    }
+    let pat = maybe_escape(this.output, html_mode);
     let ret = pat.replace(/{(\w+)}/g, (_, name) => values[name]);
     if (html_mode && ret.length > 0) {
       let root = (this.nodes.hasOwnProperty('root') ? this.nodes.root : this.nodes.root_text);
@@ -155,13 +156,13 @@ function translate(patterns, tree, html_mode) {
     }
     let cap = matches[cur.id];
     let incomplete = false;
+    let root_text = null;
     cap.requirements().forEach(function(pair) {
       if (pair.name != 'root' && !done.hasOwnProperty(pair.node.id)) {
-        if (pair.name.endsWith('_text')) {
-          done[pair.node.id] = pair.node.text;
-          if (html_mode) {
-            done[pair.node.id] = escape_html(done[pair.node.id]);
-          }
+        if (pair.name == 'root_text') {
+          root_text = pair.node;
+        } else if (pair.name.endsWith('_text')) {
+          done[pair.node.id] = maybe_escape(pair.node.text, html_mode);
         } else {
           todo.push(pair.node);
           incomplete = true;
@@ -169,6 +170,9 @@ function translate(patterns, tree, html_mode) {
       }
     });
     if (!incomplete) {
+      if (root_text != null) {
+        done[root_text.id] = maybe_escape(root_text.text, html_mode);
+      }
       todo.pop();
       done[cur.id] = cap.format(done, html_mode);
     }
