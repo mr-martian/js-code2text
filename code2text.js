@@ -71,9 +71,10 @@ class Capture {
 }
 
 class Pattern {
-  constructor(language, query_string, output) {
+  constructor(language, query_string, output, ancestor) {
     this.query = language.query(query_string);
     this.output = output;
+    this.ancestor = (ancestor ? language.query(ancestor) : ancestor);
   }
   satisfies(cond, dct) {
     for (let c of cond) {
@@ -98,8 +99,8 @@ class Pattern {
       }
     }
   }
-  match(tree, captures) {
-    for (let match of this.query.matches(tree.rootNode)) {
+  match_node(root, captures) {
+    for (let match of this.query.matches(root)) {
       let cur_root = null;
       let cur = {};
       for (let obj of match.captures) {
@@ -117,15 +118,29 @@ class Pattern {
           cur[name] = node;
         }
       }
-      if (cur_root) {
+      if (cur_root && !captures.hasOwnProperty(cur_root)) {
         captures[cur_root] = this.make_capture(cur);
       }
+    }
+  }
+  match(tree, captures) {
+    if (this.ancestor) {
+      for (let amatch of this.ancestor.matches(tree.rootNode)) {
+        for (let obj of amatch.captures) {
+          if (obj.name == 'root') {
+            this.match_node(obj.node, captures);
+          }
+        }
+      }
+    } else {
+      this.match_node(tree.rootNode, captures);
     }
   }
 }
 
 function load_patterns(language, blob) {
-  return blob.map(obj => new Pattern(language, obj.pattern, obj.output));
+  return blob.map(obj => new Pattern(language, obj.pattern, obj.output,
+                                     obj.ancestor));
 }
 
 function null_capture(node) {
